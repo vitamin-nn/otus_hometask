@@ -8,8 +8,10 @@ import (
 	"github.com/beevik/ntp"
 )
 
+const ntpServer = "0.beevik-ntp.pool.ntp.org"
+
 func main() {
-	ntpTime, err := ntp.Time("0.beevik-ntp.pool.ntp.org")
+	ntpTime, err := ntp.Time(ntpServer)
 	if err != nil {
 		log.Fatalln(err)
 	}
