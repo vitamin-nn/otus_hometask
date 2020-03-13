@@ -14,11 +14,11 @@ func Unpack(s string) (string, error) {
 
 	for i, curr := range s {
 		if unicode.IsDigit(curr) {
-			if unicode.IsDigit(prev) || i == 0 {
+			rep := int(curr - '0')
+			// check errs: two digit in a row, first sign is digit, 0 sign
+			if unicode.IsDigit(prev) || i == 0 || rep == 0 {
 				return "", ErrInvalidString
 			}
-			//rep, _ := strconv.Atoi(string(curr))
-			rep := int(curr - '0')
 			w := strings.Repeat(string(prev), (rep - 1))
 			b.WriteString(w)
 		} else {
