@@ -19,7 +19,7 @@ func Unpack(s string) (string, error) {
 			}
 			//rep, _ := strconv.Atoi(string(curr))
 			rep := int(curr - '0')
-			w := strings.Repeat(string(prev), rep-1)
+			w := strings.Repeat(string(prev), (rep - 1))
 			b.WriteString(w)
 		} else {
 			b.WriteRune(curr)
