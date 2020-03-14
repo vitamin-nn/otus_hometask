@@ -16,12 +16,13 @@ func Unpack(s string) (string, error) {
 	isEscaped := false
 
 	for i, curr := range s {
-		var w string   // will written in result
-		if isEscaped { // if backslashed current symbol
+		var w string // will written in result
+		switch {
+		case isEscaped:
 			w = string(curr)
 			isEscaped = false
 			isDigitAllowed = true
-		} else if unicode.IsDigit(curr) {
+		case unicode.IsDigit(curr):
 			factor := int(curr - '0')
 			// check errs: two digit in a row, first sign is digit, 0 sign
 			if !isDigitAllowed || i == 0 || factor == 0 {
@@ -29,10 +30,10 @@ func Unpack(s string) (string, error) {
 			}
 			w = strings.Repeat(string(prev), (factor - 1))
 			isDigitAllowed = false
-		} else if string(curr) == "\\" {
+		case string(curr) == "\\":
 			isDigitAllowed = true
 			isEscaped = true
-		} else {
+		default:
 			w = string(curr)
 			isDigitAllowed = true
 		}
