@@ -45,29 +45,3 @@ func Unpack(s string) (string, error) {
 	result := b.String()
 	return result, nil
 }
-
-// UnpackSimple without processing of backslash
-func UnpackSimple(s string) (string, error) {
-	var b strings.Builder
-	var prev rune
-
-	for i, curr := range s {
-		var w string
-		if unicode.IsDigit(curr) {
-			rep := int(curr - '0')
-			// check errs: two digit in a row, first sign is digit, 0 sign
-			if unicode.IsDigit(prev) || i == 0 || rep == 0 {
-				return "", ErrInvalidString
-			}
-			w = strings.Repeat(string(prev), (rep - 1))
-		} else {
-			w = string(curr)
-		}
-		if w != "" {
-			b.WriteString(w)
-		}
-		prev = curr
-	}
-	result := b.String()
-	return result, nil
-}
