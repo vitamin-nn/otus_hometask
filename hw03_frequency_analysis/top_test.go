@@ -7,7 +7,7 @@ import (
 )
 
 // Change to true if needed
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -48,6 +48,10 @@ func TestTop10(t *testing.T) {
 		assert.Len(t, Top10(""), 0)
 	})
 
+	t.Run("correct length", func(t *testing.T) {
+		assert.Len(t, Top10(text), 10)
+	})
+
 	t.Run("positive test", func(t *testing.T) {
 		if taskWithAsteriskIsCompleted {
 			expected := []string{"он", "а", "и", "что", "ты", "не", "если", "то", "его", "кристофер", "робин", "в"}
@@ -55,6 +59,14 @@ func TestTop10(t *testing.T) {
 		} else {
 			expected := []string{"он", "и", "а", "что", "ты", "не", "если", "-", "то", "Кристофер"}
 			assert.ElementsMatch(t, expected, Top10(text))
+		}
+	})
+
+	t.Run("duplicates prohibited", func(t *testing.T) {
+		var list []string
+		for _, word := range Top10(text) {
+			assert.NotContains(t, list, word)
+			list = append(list, word)
 		}
 	})
 }
