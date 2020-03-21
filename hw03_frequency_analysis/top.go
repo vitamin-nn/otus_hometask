@@ -26,7 +26,6 @@ func Top10(s string) []string {
 	}
 	dict := make(map[string]counter)
 
-	//words := strings.Split(s, " ")
 	var r = regexp.MustCompile(`[\s\.,;"\!]+`)
 	for _, word := range r.Split(s, -1) {
 		if !isNonWord(word) {
