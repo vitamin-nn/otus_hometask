@@ -1,23 +1,21 @@
 package hw03_frequency_analysis //nolint:golint,stylecheck
 
 import (
+	"regexp"
 	"sort"
 	"strings"
-
-	//"unicode"
-	"regexp"
 )
 
 const topLength = 10
 
 var nonWords = map[string]struct{}{
-	"—": struct{}{},
-	"-": struct{}{},
-	" ": struct{}{},
+	"—": {},
+	"-": {},
+	" ": {},
 }
 
 func Top10(s string) []string {
-	var result []string
+	result := []string{}
 
 	if s == "" {
 		return result
@@ -35,15 +33,15 @@ func Top10(s string) []string {
 			continue
 		}
 		word = strings.ToLower(word)
-		if v, ok := dict[word]; ok {
-			v.count++
-			dict[word] = v
-		} else {
-			dict[word] = counter{word: word, count: 1}
+		v, ok := dict[word]
+		if !ok {
+			v = counter{word: word, count: 0}
 		}
+		v.count++
+		dict[word] = v
 	}
 
-	wordList := make([]counter, len(dict), len(dict))
+	wordList := make([]counter, 0, len(dict))
 	for _, v := range dict {
 		wordList = append(wordList, v)
 	}
