@@ -28,7 +28,7 @@ func Top10(s string) []string {
 	dict := make(map[string]int)
 
 	f := func(c rune) bool {
-		return !unicode.IsLetter(c) && !unicode.IsNumber(c) && (string(c) != "-")
+		return !unicode.IsLetter(c) && !unicode.IsNumber(c) && (c != '-')
 	}
 	words := strings.FieldsFunc(s, f)
 	for _, word := range words {
