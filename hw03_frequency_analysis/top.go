@@ -1,9 +1,9 @@
 package hw03_frequency_analysis //nolint:golint,stylecheck
 
 import (
-	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 const topLength = 10
@@ -24,25 +24,32 @@ func Top10(s string) []string {
 		word  string
 		count int
 	}
-	dict := make(map[string]counter)
 
-	var r = regexp.MustCompile(`[\s\.,;"\!]+`)
-	for _, word := range r.Split(s, -1) {
+	dict := make(map[string]int)
+
+	f := func(c rune) bool {
+		return !unicode.IsLetter(c) && !unicode.IsNumber(c) && (string(c) != "-")
+	}
+	words := strings.FieldsFunc(s, f)
+	for _, word := range words {
 		if !isNonWord(word) {
 			continue
 		}
 		word = strings.ToLower(word)
-		v, ok := dict[word]
-		if !ok {
-			v = counter{word: word, count: 0}
+
+		if _, ok := dict[word]; !ok {
+			dict[word] = 0
 		}
-		v.count++
-		dict[word] = v
+		dict[word]++
 	}
 
 	wordList := make([]counter, 0, len(dict))
-	for _, v := range dict {
-		wordList = append(wordList, v)
+	for word, cnt := range dict {
+		c := counter{
+			word:  word,
+			count: cnt,
+		}
+		wordList = append(wordList, c)
 	}
 
 	sort.Slice(wordList, func(i, j int) bool {
@@ -62,9 +69,6 @@ func Top10(s string) []string {
 }
 
 func isNonWord(w string) bool {
-	result := true
-	if _, ok := nonWords[w]; ok {
-		result = false
-	}
-	return result
+	_, ok := nonWords[w]
+	return !ok
 }
