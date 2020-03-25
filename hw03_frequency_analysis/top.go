@@ -37,9 +37,6 @@ func Top10(s string) []string {
 		}
 		word = strings.ToLower(word)
 
-		if _, ok := dict[word]; !ok {
-			dict[word] = 0
-		}
 		dict[word]++
 	}
 
