@@ -63,7 +63,7 @@ func TestCache(t *testing.T) {
 		_ = c.Set("aaa", 100)
 		_ = c.Set("bbb", 200)
 		_ = c.Set("ccc", 300) // ccc, bbb, aaa
-		val, ok = c.Get("aaa") // aaa, ccc, bbb
+		_, _ = c.Get("aaa") // aaa, ccc, bbb
 		_ = c.Set("ddd", 400) // ddd, aaa, ccc
 		// bbb should purged
 		val, ok = c.Get("bbb")

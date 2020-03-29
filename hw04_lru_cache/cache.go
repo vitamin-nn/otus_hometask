@@ -53,8 +53,8 @@ func (l *lruCache) Get(key Key) (interface{}, bool) {
 	}
 	l.queue.MoveToFront(v)
 
-	lValue := v.Value.(*cacheItem)
-	return lValue.value, true
+	cValue := v.Value.(*cacheItem)
+	return cValue.value, true
 }
 
 func (l *lruCache) Clear() {
@@ -65,8 +65,8 @@ func (l *lruCache) Clear() {
 func (l *lruCache) purgeBack() {
 	back := l.queue.Back()
 	l.queue.Remove(back)
-	backVal := back.Value.(*cacheItem)
-	delete(l.items, backVal.key)
+	cValue := back.Value.(*cacheItem)
+	delete(l.items, cValue.key)
 }
 
 func NewCache(capacity int) Cache {
