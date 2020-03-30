@@ -25,13 +25,13 @@ type cacheItem struct {
 }
 
 func (l *lruCache) Set(key Key, value interface{}) bool {
+	l.Lock()
+	defer l.Unlock()
+
 	cItem := &cacheItem{
 		key:   key,
 		value: value,
 	}
-
-	l.Lock()
-	defer l.Unlock()
 	v, ok := l.items[key]
 	if ok {
 		l.queue.Remove(v)
@@ -58,6 +58,8 @@ func (l *lruCache) Get(key Key) (interface{}, bool) {
 }
 
 func (l *lruCache) Clear() {
+	l.Lock()
+	defer l.Unlock()
 	l.queue = NewList()
 	l.items = make(map[Key]*listItem)
 }
