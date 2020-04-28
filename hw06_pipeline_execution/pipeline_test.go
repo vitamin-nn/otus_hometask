@@ -2,6 +2,7 @@ package hw06_pipeline_execution //nolint:golint,stylecheck
 
 import (
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -69,7 +70,8 @@ func TestPipeline(t *testing.T) {
 		// Abort after 200ms
 		abortDur := sleepPerStage * 2
 		go func() {
-			done <- <-time.After(abortDur)
+			<-time.After(abortDur)
+			close(done)
 		}()
 
 		go func() {
@@ -88,5 +90,46 @@ func TestPipeline(t *testing.T) {
 
 		require.Len(t, result, 0)
 		require.Less(t, int64(elapsed), int64(abortDur)+int64(fault))
+	})
+
+	t.Run("check that pipeline", func(t *testing.T) {
+		// здесь проверяется, что реализован именно pipeline:
+		// обработка последующего элемента входных данных должна
+		// происходить **без ожидания завершения всего пайплайна**
+		var count uint32
+		in := make(Bi)
+		done := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		stages := []Stage{
+			g("First", func(v I) I {
+				return v
+			}),
+			g("Second", func(v I) I {
+				atomic.AddUint32(&count, 1)
+				return v
+			}),
+			g("Third", func(v I) I { return v }),
+			g("Fourth", func(v I) I { return v }),
+		}
+
+		// Abort after 300ms
+		abortDur := sleepPerStage * 3
+		go func() {
+			<-time.After(abortDur)
+			close(done)
+		}()
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		for range ExecutePipeline(in, done, stages...) {
+		}
+		// после 300 мс работы через второй stage должен пройти, как минимум, 1 элемент
+		require.Less(t, 0, int(atomic.LoadUint32(&count)))
 	})
 }
