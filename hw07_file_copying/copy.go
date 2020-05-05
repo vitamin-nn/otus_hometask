@@ -12,6 +12,9 @@ var (
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 	ErrInputParams           = errors.New("from and to params are required")
 	ErrSeekSetting           = errors.New("seek setting error")
+	ErrOpenInFile            = errors.New("open \"in\" file error")
+	ErrOutFileCreate         = errors.New("create \"out\" file error")
+	ErrCopyFile              = errors.New("copy file error")
 )
 
 func Copy(fromPath string, toPath string, offset, limit int64) error {
@@ -28,7 +31,7 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 
 	inFile, err := os.Open(fromPath)
 	if err != nil {
-		return fmt.Errorf("open \"in\" file error: %s", err)
+		return ErrOpenInFile
 	}
 	defer inFile.Close()
 
@@ -44,7 +47,7 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 
 	outFile, err := os.Create(toPath)
 	if err != nil {
-		return fmt.Errorf("create \"out\" file error: %s", err)
+		return ErrOutFileCreate
 	}
 	defer outFile.Close()
 
@@ -58,7 +61,7 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 	pb.Finish()
 
 	if err != nil {
-		return fmt.Errorf("copy file error: %s", err)
+		return ErrCopyFile
 	}
 	return nil
 }
