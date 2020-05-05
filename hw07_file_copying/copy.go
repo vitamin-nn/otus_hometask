@@ -11,6 +11,7 @@ var (
 	ErrUnsupportedFile       = errors.New("unsupported file")
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 	ErrInputParams           = errors.New("from and to params are required")
+	ErrSeekSetting           = errors.New("seek setting error")
 )
 
 func Copy(fromPath string, toPath string, offset, limit int64) error {
@@ -27,19 +28,23 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 
 	inFile, err := os.Open(fromPath)
 	if err != nil {
-		return fmt.Errorf("open \"in\" file error: %s\n", err)
+		return fmt.Errorf("open \"in\" file error: %s", err)
 	}
 	defer inFile.Close()
 
-	if offset > 0 {
-		inFile.Seek(offset, io.SeekStart)
-	} else if offset < 0 {
-		inFile.Seek(offset, io.SeekEnd)
+	seekMode := io.SeekStart
+	if offset < 0 {
+		seekMode = io.SeekEnd
+	}
+	if offset != 0 {
+		if _, err = inFile.Seek(offset, seekMode); err != nil {
+			return ErrSeekSetting
+		}
 	}
 
 	outFile, err := os.Create(toPath)
 	if err != nil {
-		return fmt.Errorf("create \"out\" file error: %s\n", err)
+		return fmt.Errorf("create \"out\" file error: %s", err)
 	}
 	defer outFile.Close()
 
@@ -53,7 +58,7 @@ func Copy(fromPath string, toPath string, offset, limit int64) error {
 	pb.Finish()
 
 	if err != nil {
-		return fmt.Errorf("copy file error: %s\n", err)
+		return fmt.Errorf("copy file error: %s", err)
 	}
 	return nil
 }

@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-const (
-	progressLength = float64(50)
+var (
+	progressLength float64 = 50
+	percent        float64 = 100
 )
 
 type ProgressBar struct {
@@ -50,7 +51,7 @@ func (p *ProgressBar) render() string {
 	var b strings.Builder
 	b.WriteString("[")
 	ready := float64(current) / float64(p.bytesCount)
-	readyPerc := math.Ceil(ready * 100)
+	readyPerc := math.Ceil(ready * percent)
 	complLen := math.Ceil(ready * progressLength)
 	leftLen := progressLength - complLen
 	b.WriteString(strings.Repeat("█", int(complLen)))
