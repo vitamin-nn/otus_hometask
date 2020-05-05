@@ -10,55 +10,51 @@ import (
 var (
 	ErrUnsupportedFile       = errors.New("unsupported file")
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
-	ErrInputParams           = errors.New("from and to are required")
+	ErrInputParams           = errors.New("from and to params are required")
 )
 
 func Copy(fromPath string, toPath string, offset, limit int64) error {
 	if fromPath == "" || toPath == "" {
-		fmt.Println("params:", fromPath, toPath)
 		return ErrInputParams
 	}
-	fromPathSize, err := getFileSize(fromPath)
+	inFileSize, err := getFileSize(fromPath)
 	if err != nil {
-		return fmt.Errorf("getting file size error: %s\n", err)
+		return err
 	}
-	if offset > fromPathSize {
+	if offset > inFileSize {
 		return ErrOffsetExceedsFileSize
 	}
 
-	var n int64
-	if limit > 0 {
-		n = limit
-	} else {
-		n = fromPathSize
-	}
-
-	fileFrom, err := os.Open(fromPath)
+	inFile, err := os.Open(fromPath)
 	if err != nil {
-		return fmt.Errorf("open \"from\" file error: %s\n", err)
+		return fmt.Errorf("open \"in\" file error: %s\n", err)
 	}
-	defer fileFrom.Close()
+	defer inFile.Close()
 
 	if offset > 0 {
-		fileFrom.Seek(offset, io.SeekStart)
+		inFile.Seek(offset, io.SeekStart)
 	} else if offset < 0 {
-		fileFrom.Seek(offset, io.SeekEnd)
+		inFile.Seek(offset, io.SeekEnd)
 	}
 
-	fileTo, err := os.Create(toPath)
+	outFile, err := os.Create(toPath)
 	if err != nil {
-		return fmt.Errorf("create \"to\" file error: %s\n", err)
+		return fmt.Errorf("create \"out\" file error: %s\n", err)
 	}
-	defer fileTo.Close()
+	defer outFile.Close()
 
-	pb := NewProxyReader(fileFrom, n)
-	_, err = io.CopyN(fileTo, pb, n)
+	// если бы не нужно было реализовывать прогрессбар, то можно просто взять
+	// минимальное значение из (inFileSize и limit) при условии что limit > 0
+	// а в функции CopyN не реагировать на io.EOF
+	n := getBytesCount(inFileSize, offset, limit)
+	pb := NewProxyReader(inFile, n)
+	fmt.Printf("\nCopying from '%s' to '%s'\n", fromPath, toPath)
+	_, err = io.CopyN(outFile, pb, n)
 	pb.Finish()
 
-	if err != nil && err != io.EOF {
+	if err != nil {
 		return fmt.Errorf("copy file error: %s\n", err)
 	}
-
 	return nil
 }
 
@@ -72,4 +68,17 @@ func getFileSize(filepath string) (int64, error) {
 		return 0, ErrUnsupportedFile
 	}
 	return size, nil
+}
+
+func getBytesCount(fileSize, offset, limit int64) int64 {
+	start := offset
+	if offset < 0 {
+		start = fileSize + offset
+	}
+	end := fileSize
+	endLimited := start + limit
+	if limit > 0 && end > endLimited {
+		end = endLimited
+	}
+	return (end - start)
 }
