@@ -1,22 +1,20 @@
 package hw10_program_optimization //nolint:golint,stylecheck
 
 import (
-	"encoding/json"
+	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"regexp"
 	"strings"
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
+	ID       int    `json:"-"`
+	Name     string `json:"-"`
+	Username string `json:"-"`
 	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Phone    string `json:"-"`
+	Password string `json:"-"`
+	Address  string `json:"-"`
 }
 
 type DomainStat map[string]int
@@ -32,35 +30,44 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 type users [100_000]User
 
 func getUsers(r io.Reader) (result users, err error) {
-	content, err := ioutil.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
+	reader := bufio.NewReader(r)
+	i := 0
+	var user User
+	var lineBytes []byte
+	ok := true
+	for ok {
+		lineBytes, err = reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				// чтобы прочитать последнюю строку
+				ok = false
+				err = nil
+			} else {
+				break
+			}
 		}
-		result[i] = user
+
+		err = user.UnmarshalJSON(lineBytes)
+		if err == nil {
+			result[i] = user
+		}
+		i++
 	}
 	return
 }
 
 func countDomains(u users, domain string) (DomainStat, error) {
 	result := make(DomainStat)
-
+	var fullDomain string
 	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
-		if err != nil {
-			return nil, err
+		if user.Email == "" {
+			// считаем, что данные кончились
+			break
 		}
+		fullDomain = strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])
 
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+		if strings.HasSuffix(fullDomain, domain) {
+			result[fullDomain]++
 		}
 	}
 	return result, nil
