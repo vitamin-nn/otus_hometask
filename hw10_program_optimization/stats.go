@@ -19,6 +19,7 @@ type User struct {
 
 type DomainStat map[string]int
 
+//nolint
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	u, err := getUsers(r)
 	if err != nil {
