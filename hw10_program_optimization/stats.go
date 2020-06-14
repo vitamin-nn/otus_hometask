@@ -31,23 +31,13 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 type users [100_000]User
 
 func getUsers(r io.Reader) (result users, err error) {
-	reader := bufio.NewReader(r)
-	i := 0
+	scanner := bufio.NewScanner(r)
+	var i int
 	var user User
 	var lineBytes []byte
-	ok := true
-	for ok {
-		lineBytes, err = reader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				// чтобы прочитать последнюю строку
-				ok = false
-				err = nil
-			} else {
-				break
-			}
-		}
 
+	for scanner.Scan() {
+		lineBytes = scanner.Bytes()
 		err = user.UnmarshalJSON(lineBytes)
 		if err == nil {
 			result[i] = user
@@ -65,9 +55,9 @@ func countDomains(u users, domain string) (DomainStat, error) {
 			// считаем, что данные кончились
 			break
 		}
-		fullDomain = strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])
 
-		if strings.HasSuffix(fullDomain, domain) {
+		if strings.HasSuffix(user.Email, domain) {
+			fullDomain = strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])
 			result[fullDomain]++
 		}
 	}
