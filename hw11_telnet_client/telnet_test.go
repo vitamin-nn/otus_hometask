@@ -106,29 +106,20 @@ func TestTelnetClient(t *testing.T) {
 		require.NoError(t, err)
 		defer func() { require.NoError(t, l.Close()) }()
 
-		var wg sync.WaitGroup
-		wg.Add(1)
+		inR, inW := io.Pipe()
+		out := &bytes.Buffer{}
 
-		go func() {
-			defer wg.Done()
+		timeout, err := time.ParseDuration("10s")
+		require.NoError(t, err)
 
-			inR, inW := io.Pipe()
-			out := &bytes.Buffer{}
+		client := NewTelnetClient(l.Addr().String(), timeout, inR, out)
+		require.NoError(t, client.Connect())
+		defer func() { require.NoError(t, client.Close()) }()
 
-			timeout, err := time.ParseDuration("10s")
-			require.NoError(t, err)
+		err = inW.Close()
+		require.NoError(t, err)
 
-			client := NewTelnetClient(l.Addr().String(), timeout, inR, out)
-			require.NoError(t, client.Connect())
-			defer func() { require.NoError(t, client.Close()) }()
-
-			err = inW.Close()
-			require.NoError(t, err)
-
-			err = client.Send()
-			require.EqualError(t, err, ErrEOF.Error())
-		}()
-
-		wg.Wait()
+		err = client.Send()
+		require.EqualError(t, err, ErrEOF.Error())
 	})
 }
