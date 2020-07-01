@@ -1,3 +1,8 @@
+ifndef $(GOPATH)
+    GOPATH=$(shell go env GOPATH)
+    export GOPATH
+endif
+
 build:
 	go build -o ./.bin/calendar ./cmd/calendar/main.go
 
@@ -5,7 +10,7 @@ test:
 	go test -race ./...
 
 install-deps:
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin latest
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOPATH)/bin latest
 
 lint: install-deps
 	golangci-lint run ./...
