@@ -8,7 +8,7 @@ read_timeout = "15s"
 write_timeout = "15s"
 
 [app]
-repo_type = "psql"
+repo_type = "inmemory"
 
 [psql]
 dsn = "host=localhost port=5432 user=vdudov password=123qwe dbname=calendar sslmode=disable"
