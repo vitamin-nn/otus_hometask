@@ -4,7 +4,10 @@ build:
 test:
 	go test -race ./...
 
-lint:
+install-deps:
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin latest
+
+lint: install-deps
 	golangci-lint run ./...
 
 run:
