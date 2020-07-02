@@ -23,11 +23,11 @@ func NewEventRepo(db *sql.DB) *Psql {
 	}
 }
 
-func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (err error) {
+func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
 	tx, err := e.db.Begin()
 	if err != nil {
 		err = fmt.Errorf("begin transaction error: %v", err)
-		return
+		return nil, err
 	}
 	defer func() {
 		err = tx.Rollback()
@@ -35,14 +35,14 @@ func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (err er
 
 	exists, err := e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if exists {
 		err = repository.ErrDateBusy
-		return
+		return nil, err
 	}
 
-	_, err = e.db.ExecContext(
+	result, err := tx.ExecContext(
 		ctx,
 		`insert into events(
 			title,
@@ -62,34 +62,41 @@ func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (err er
 	)
 	if err != nil {
 		err = fmt.Errorf("insert into events error: %v", err)
-		return
+		return nil, err
 	}
+
+	eventID, err := result.LastInsertId()
+	if err != nil {
+		err = fmt.Errorf("last insert id getting error: %v", err)
+		return nil, err
+	}
+	event.ID = int(eventID)
+
 	err = tx.Commit()
-	return
+	return event, err
 }
 
-func (e *Psql) UpdateEvent(ctx context.Context, eventID int, event *repository.Event) (err error) {
+func (e *Psql) UpdateEvent(ctx context.Context, eventID int, event *repository.Event) (*repository.Event, error) {
 	tx, err := e.db.Begin()
 	if err != nil {
 		err = fmt.Errorf("begin transaction error: %v", err)
-		return
+		return nil, err
 	}
 	defer func() {
 		err = tx.Rollback()
 	}()
 
-	//exists, err := e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt)
 	events, err := e.getEventsByFilter(ctx, event.UserID, event.StartAt, event.EndAt)
 	if err != nil {
 		err = fmt.Errorf("get events error: %v", err)
-		return
+		return nil, err
 	}
 	if len(events) > 1 || (len(events) == 1 && events[0].ID != eventID) {
 		err = repository.ErrDateBusy
-		return
+		return nil, err
 	}
 
-	_, err = e.db.ExecContext(
+	_, err = tx.ExecContext(
 		ctx,
 		`update events 
 		 set
@@ -110,10 +117,11 @@ func (e *Psql) UpdateEvent(ctx context.Context, eventID int, event *repository.E
 	)
 	if err != nil {
 		err = fmt.Errorf("update events error: %v", err)
-		return
+		return nil, err
 	}
+	event.ID = eventID
 	err = tx.Commit()
-	return
+	return event, err
 }
 
 func (e *Psql) DeleteEvent(ctx context.Context, eventID int) error {

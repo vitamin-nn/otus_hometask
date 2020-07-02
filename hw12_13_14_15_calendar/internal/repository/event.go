@@ -29,8 +29,8 @@ type Notification struct {
 }
 
 type EventsRepo interface {
-	CreateEvent(ctx context.Context, event *Event) error
-	UpdateEvent(ctx context.Context, eventID int, event *Event) error
+	CreateEvent(ctx context.Context, event *Event) (*Event, error)
+	UpdateEvent(ctx context.Context, eventID int, event *Event) (*Event, error)
 	DeleteEvent(ctx context.Context, eventID int) error
 	GetEventsDay(ctx context.Context, userID int, dBegin time.Time) ([]*Event, error)
 	GetEventsWeek(ctx context.Context, userID int, wBegin time.Time) ([]*Event, error)

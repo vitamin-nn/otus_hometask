@@ -24,24 +24,24 @@ func NewEventRepo() *InMemory {
 	}
 }
 
-func (e *InMemory) CreateEvent(ctx context.Context, event *repository.Event) error {
+func (e *InMemory) CreateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	if e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt) {
-		return repository.ErrDateBusy
+		return nil, repository.ErrDateBusy
 	}
 	e.events[event.ID] = event
-	return nil
+	return event, nil
 }
 
-func (e *InMemory) UpdateEvent(ctx context.Context, eventID int, event *repository.Event) error {
+func (e *InMemory) UpdateEvent(ctx context.Context, eventID int, event *repository.Event) (*repository.Event, error) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 	if e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt) {
-		return repository.ErrDateBusy
+		return nil, repository.ErrDateBusy
 	}
 	e.events[eventID] = event
-	return nil
+	return event, nil
 }
 
 func (e *InMemory) DeleteEvent(_ context.Context, eventID int) error {
