@@ -29,3 +29,5 @@ func (e *EventUseCase) CreateEvent(ctx context.Context, title, descr string, sta
 
 	return e.er.CreateEvent(ctx, event)
 }
+
+// остальные методы будут добавлены в рамках следующих итераций ДЗ
