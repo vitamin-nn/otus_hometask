@@ -28,7 +28,7 @@ type Notification struct {
 	NotifyUserID int
 }
 
-type EventsRepo interface {
+type EventRepo interface {
 	CreateEvent(ctx context.Context, event *Event) (*Event, error)
 	UpdateEvent(ctx context.Context, eventID int, event *Event) (*Event, error)
 	DeleteEvent(ctx context.Context, eventID int) error

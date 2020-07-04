@@ -17,6 +17,7 @@ import (
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository/inmemory"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository/psql"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase"
 )
 
 func main() {
@@ -42,7 +43,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	var repo repository.EventsRepo
+	var repo repository.EventRepo
 	switch cfg.App.RepoType {
 	case inmemory.Type:
 		repo = inmemory.NewEventRepo()
@@ -55,7 +56,8 @@ func main() {
 		repo = psql.NewEventRepo(db)
 	}
 
-	app := server.NewApp(repo)
+	eUseCase := usecase.NewEventUseCase(repo)
+	app := server.NewApp(eUseCase)
 	go app.Run(cfg.Server.Addr, wTimeout, rTimeout)
 
 	interruptCh := make(chan os.Signal, 1)

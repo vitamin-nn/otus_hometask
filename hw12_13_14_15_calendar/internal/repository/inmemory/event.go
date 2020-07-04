@@ -10,11 +10,12 @@ import (
 
 const Type = "inmemory"
 
-var _ repository.EventsRepo = (*InMemory)(nil)
+var _ repository.EventRepo = (*InMemory)(nil)
 
 type InMemory struct {
-	events map[int]*repository.Event
-	mutex  *sync.Mutex
+	eventsCounter int
+	events        map[int]*repository.Event
+	mutex         *sync.Mutex
 }
 
 func NewEventRepo() *InMemory {
@@ -30,6 +31,8 @@ func (e *InMemory) CreateEvent(ctx context.Context, event *repository.Event) (*r
 	if e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt) {
 		return nil, repository.ErrDateBusy
 	}
+	e.eventsCounter++
+	event.ID = e.eventsCounter
 	e.events[event.ID] = event
 	return event, nil
 }

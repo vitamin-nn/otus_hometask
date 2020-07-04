@@ -6,24 +6,24 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server/handler"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase"
 )
 
 type App struct {
 	httpServer *http.Server
-	cHandler   *handler.Calendar
+	eHandler   *handler.EventHandler
 }
 
-func NewApp(repo repository.EventsRepo) *App {
+func NewApp(eUseCase *usecase.EventUseCase) *App {
 	a := new(App)
-	a.cHandler = handler.NewCalendarHandler(repo)
+	a.eHandler = handler.NewEventHandler(eUseCase)
 	return a
 }
 
 func (a *App) Run(addr string, wTimeout, rTimeout time.Duration) {
 	siteMux := http.NewServeMux()
-	siteMux.HandleFunc("/", a.cHandler.HelloWorld)
+	siteMux.HandleFunc("/", a.eHandler.HelloWorld)
 
 	siteHandler := logMiddleware(siteMux)
 

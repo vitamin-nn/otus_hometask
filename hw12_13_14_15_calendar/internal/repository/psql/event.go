@@ -11,7 +11,7 @@ import (
 
 const Type = "psql"
 
-var _ repository.EventsRepo = (*Psql)(nil)
+var _ repository.EventRepo = (*Psql)(nil)
 
 type Psql struct {
 	db *sql.DB

@@ -26,16 +26,14 @@ func TestEvent(t *testing.T) {
 	require.Nil(t, err)
 	userID := 1
 	events := []*repository.Event{
-		{
-			ID:          1,
+		{ // ID:          1,
 			Title:       "Test event 1",
 			Description: "Test event 1 description",
 			StartAt:     t1Start,
 			EndAt:       t1End,
 			UserID:      userID,
 		},
-		{
-			ID:          2,
+		{ // ID:          2,
 			Title:       "Test event 2",
 			Description: "Test event 2 description",
 			StartAt:     t2Start,
@@ -43,8 +41,7 @@ func TestEvent(t *testing.T) {
 			NotifyAt:    t2Notify,
 			UserID:      userID,
 		},
-		{
-			ID:          3,
+		{ // ID:          3,
 			Title:       "Test event 3",
 			Description: "Test event 3 description",
 			StartAt:     t3Start,
@@ -68,7 +65,6 @@ func TestEvent(t *testing.T) {
 	t4End, err := time.Parse(time.RFC3339, "2020-01-02T16:30:00+03:00")
 	require.Nil(t, err)
 	overlapEvent := &repository.Event{
-		ID:          4,
 		Title:       "Test event 4",
 		Description: "Test event 4 description",
 		StartAt:     t4Start,
