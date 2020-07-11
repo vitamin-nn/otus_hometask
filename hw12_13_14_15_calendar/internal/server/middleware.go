@@ -13,7 +13,7 @@ func logMiddleware(next http.Handler) http.Handler {
 		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 		next.ServeHTTP(w, r)
 
-		log.Printf(
+		defer log.Printf(
 			"%s %s %s %s %v %s",
 			r.Method,
 			r.Proto,

@@ -1,16 +1,16 @@
 -- +goose Up
+-- перед запуском нужно убедиться, что установлено расширение CREATE EXTENSION btree_gist; - нужны админские права
 CREATE TABLE events (
     id serial primary key,
     title text,
     description text,
-    start_at timestamptz not null,
-    end_at timestamptz not null,
+    during tstzrange,
     notify_at timestamptz,
-    user_id integer
+    user_id integer,
+    EXCLUDE USING GIST (user_id WITH =, during WITH &&)
 );
 
 CREATE INDEX ix_events_notify_at ON events USING btree (notify_at);
-CREATE INDEX ix_events_user_start_at_end_at ON events (user_id, start_at, end_at);
 
 -- +goose Down
 DROP TABLE events;

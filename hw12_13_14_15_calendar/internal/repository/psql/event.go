@@ -6,128 +6,109 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgconn"
+	_ "github.com/jackc/pgx/v4/stdlib"
+
+	outErr "github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/error"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 )
 
 const Type = "psql"
+const ConstraintViolationCode = "23"
 
 var _ repository.EventRepo = (*Psql)(nil)
 
 type Psql struct {
-	db *sql.DB
+	dsn string
+	db  *sql.DB
 }
 
-func NewEventRepo(db *sql.DB) *Psql {
+func NewEventRepo(dsn string) *Psql {
 	return &Psql{
-		db: db,
+		dsn: dsn,
 	}
+}
+
+func (e *Psql) Connect(ctx context.Context) error {
+	db, err := sql.Open("pgx", e.dsn)
+	if err != nil {
+		return err
+	}
+	e.db = db
+	e.db.Stats()
+	return e.db.PingContext(ctx)
+}
+
+func (e *Psql) Close() error {
+	return e.db.Close()
 }
 
 func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
-	tx, err := e.db.Begin()
-	if err != nil {
-		err = fmt.Errorf("begin transaction error: %v", err)
-		return nil, err
-	}
-	defer func() {
-		err = tx.Rollback()
-	}()
-
-	exists, err := e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		err = repository.ErrDateBusy
-		return nil, err
-	}
-
-	result, err := tx.ExecContext(
+	var eventID int
+	err := e.db.QueryRowContext(
 		ctx,
-		`insert into events(
+		`INSERT INTO events(
 			title,
 			description,
-			start_at,
-			end_at,
+			during,
 			notify_at,
 			user_id
 		)
-		values($1, $2, $3, $4, $5, $6)`,
+		VALUES($1, $2, tstzrange($3, $4, '[]'), $5, $6)
+		RETURNING id`,
 		event.Title,
 		event.Description,
 		event.StartAt,
 		event.EndAt,
 		event.NotifyAt,
 		event.UserID,
-	)
+	).Scan(&eventID)
 	if err != nil {
-		err = fmt.Errorf("insert into events error: %v", err)
-		return nil, err
+		specErr := getSpecificError(err)
+		if specErr == nil {
+			specErr = fmt.Errorf("insert error: %v", err)
+		}
+		return nil, specErr
 	}
 
-	eventID, err := result.LastInsertId()
-	if err != nil {
-		err = fmt.Errorf("last insert id getting error: %v", err)
-		return nil, err
-	}
 	event.ID = int(eventID)
 
-	err = tx.Commit()
-	return event, err
+	return event, nil
 }
 
-func (e *Psql) UpdateEvent(ctx context.Context, eventID int, event *repository.Event) (*repository.Event, error) {
-	tx, err := e.db.Begin()
-	if err != nil {
-		err = fmt.Errorf("begin transaction error: %v", err)
-		return nil, err
-	}
-	defer func() {
-		err = tx.Rollback()
-	}()
-
-	events, err := e.getEventsByFilter(ctx, event.UserID, event.StartAt, event.EndAt)
-	if err != nil {
-		err = fmt.Errorf("get events error: %v", err)
-		return nil, err
-	}
-	if len(events) > 1 || (len(events) == 1 && events[0].ID != eventID) {
-		err = repository.ErrDateBusy
-		return nil, err
-	}
-
-	_, err = tx.ExecContext(
+func (e *Psql) UpdateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
+	_, err := e.db.ExecContext(
 		ctx,
-		`update events 
-		 set
+		`UPDATE events
+		 SET
 			title = $1,
 			description = $2,
-			start_at = $3,
-			end_at = $4,
+			during = tstzrange($3, $4, '[]'),
 			notify_at = $5,
 			user_id = $6
-		 where id = $7`,
+		 WHERE id = $7`,
 		event.Title,
 		event.Description,
 		event.StartAt,
 		event.EndAt,
 		event.NotifyAt,
 		event.UserID,
-		eventID,
+		event.ID,
 	)
 	if err != nil {
-		err = fmt.Errorf("update events error: %v", err)
-		return nil, err
+		specErr := getSpecificError(err)
+		if specErr == nil {
+			specErr = fmt.Errorf("update error: %v", err)
+		}
+		return nil, specErr
 	}
-	event.ID = eventID
-	err = tx.Commit()
-	return event, err
+	return event, nil
 }
 
 func (e *Psql) DeleteEvent(ctx context.Context, eventID int) error {
 	res, err := e.db.ExecContext(
 		ctx,
-		"delete from events where id = $1",
+		"DELETE FROM events WHERE id = $1",
 		eventID,
 	)
 	if err != nil {
@@ -139,27 +120,10 @@ func (e *Psql) DeleteEvent(ctx context.Context, eventID int) error {
 		return err
 	}
 	if cnt < 1 {
-		return repository.ErrEventNotFound
+		return outErr.ErrEventNotFound
 	}
 
 	return nil
-}
-func (e *Psql) GetEventsDay(ctx context.Context, userID int, dBegin time.Time) ([]*repository.Event, error) {
-	year, month, day := dBegin.Date()
-	loc := dBegin.Location()
-	begin := time.Date(year, month, day, 0, 0, 0, 0, loc)
-	end := time.Date(year, month, day, 23, 59, 59, 0, loc)
-	return e.getEventsByFilter(ctx, userID, begin, end)
-}
-
-func (e *Psql) GetEventsWeek(ctx context.Context, userID int, wBegin time.Time) ([]*repository.Event, error) {
-	end := wBegin.AddDate(0, 0, 7)
-	return e.getEventsByFilter(ctx, userID, wBegin, end)
-}
-
-func (e *Psql) GetEventsMonth(ctx context.Context, userID int, mBegin time.Time) ([]*repository.Event, error) {
-	end := mBegin.AddDate(0, 1, 0)
-	return e.getEventsByFilter(ctx, userID, mBegin, end)
 }
 
 func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event, error) {
@@ -167,18 +131,18 @@ func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event
 	ev := new(repository.Event)
 	err := e.db.QueryRowContext(
 		ctx,
-		`select
+		`SELECT
 			id,
 			title,
 			description,
-			start_at,
-			end_at,
+			lower(during),
+			upper(during),
 			notify_at,
 			user_id
-		from events
-		where
+		FROM events
+		WHERE
 			id = $1
-		limit 1`,
+		LIMIT 1`,
 		eventID,
 	).Scan(&ev.ID,
 		&ev.Title,
@@ -203,25 +167,21 @@ func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event
 	return ev, nil
 }
 
-func (e *Psql) getEventsByFilter(ctx context.Context, userID int, begin time.Time, end time.Time) ([]*repository.Event, error) {
+func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Time, end time.Time) ([]*repository.Event, error) {
 	rows, err := e.db.QueryContext(
 		ctx,
-		`select
+		`SELECT
 			id,
 			title,
 			description,
-			start_at,
-			end_at,
+			lower(during),
+			upper(during),
 			notify_at,
 			user_id
-		from events
-		where
+		FROM events
+		WHERE
 			user_id = $1
-			and (
-				(start_at <= $2 and end_at >= $2)
-				or (start_at <= $3 and end_at >= $3)
-				or (start_at >= $2 and end_at <= $3)
-			)`,
+			AND during && tstzrange($2, $3, '[]')`,
 		userID,
 		begin,
 		end,
@@ -260,27 +220,11 @@ func (e *Psql) getEventsByFilter(ctx context.Context, userID int, begin time.Tim
 	return result, rows.Err()
 }
 
-func (e *Psql) isBusyTime(ctx context.Context, userID int, begin time.Time, end time.Time) (bool, error) {
-	var exists bool
-	err := e.db.QueryRowContext(
-		ctx,
-		`select exists(
-			select 1 from events 
-			where user_id = $1
-			and (
-				(start_at <= $2 and end_at >= $2)
-				or (start_at <= $3 and end_at >= $3)
-				or (start_at >= $2 and end_at <= $3)
-			) 
-			limit 1
-		)`,
-		userID,
-		begin,
-		end,
-	).Scan(&exists)
-	if err != nil {
-		return exists, fmt.Errorf("select exists error: %v", err)
+func getSpecificError(err error) error {
+	if errPg, ok := err.(*pgconn.PgError); ok {
+		if sqlState := errPg.SQLState(); len(sqlState) > 2 && string(sqlState[0:2]) == ConstraintViolationCode {
+			return outErr.ErrDateBusy
+		}
 	}
-
-	return exists, nil
+	return nil
 }

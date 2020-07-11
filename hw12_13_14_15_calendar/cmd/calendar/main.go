@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"os"
 	"os/signal"
 	"time"
 
-	_ "github.com/jackc/pgx/v4/stdlib"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/config"
@@ -33,32 +31,23 @@ func main() {
 		log.Fatalf("initialize logger error: %v", err)
 	}
 
-	wTimeout, err := time.ParseDuration(cfg.Server.WriteTimeout)
-	if err != nil {
-		log.Fatalf("write timeout parse error: %v", err)
-	}
-	rTimeout, err := time.ParseDuration(cfg.Server.ReadTimeout)
-	if err != nil {
-		log.Fatalf("read timeout parse error: %v", err)
-	}
-
 	ctx := context.Background()
 	var repo repository.EventRepo
 	switch cfg.App.RepoType {
 	case inmemory.Type:
 		repo = inmemory.NewEventRepo()
 	case psql.Type:
-		db, err := psqlConnect(ctx, cfg.PSQL.DSN)
+		repo = psql.NewEventRepo(cfg.PSQL.DSN)
+		err := repo.Connect(ctx)
 		if err != nil {
 			log.Fatalf("psql connect error: %v", err)
 		}
-		defer db.Close()
-		repo = psql.NewEventRepo(db)
+		defer repo.Close()
 	}
 
 	eUseCase := usecase.NewEventUseCase(repo)
 	app := server.NewApp(eUseCase)
-	go app.Run(cfg.Server.Addr, wTimeout, rTimeout)
+	go app.Run(cfg.Server.Addr, cfg.Server.WriteTimeout, cfg.Server.ReadTimeout)
 
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, os.Interrupt)
@@ -72,13 +61,4 @@ func main() {
 	}
 
 	log.Info("finished main program")
-}
-
-func psqlConnect(ctx context.Context, dsn string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, err
-	}
-	db.Stats()
-	return db, db.PingContext(ctx)
 }

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -24,6 +26,8 @@ func Load(filepath string) (c *Config, err error) {
 
 func setDefaults() {
 	viper.SetDefault("log.log_level", "info")
+	viper.SetDefault("server.read_timeout", "15s")
+	viper.SetDefault("server.read_timeout", "15s")
 }
 
 type Config struct {
@@ -44,8 +48,8 @@ type Log struct {
 
 type Server struct {
 	Addr         string
-	ReadTimeout  string `mapstructure:"read_timeout"`
-	WriteTimeout string `mapstructure:"write_timeout"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 }
 
 type App struct {

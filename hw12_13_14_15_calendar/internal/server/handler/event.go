@@ -23,5 +23,5 @@ func (c *EventHandler) HelloWorld(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Hello World1")
+	fmt.Fprintf(w, "Hello World")
 }

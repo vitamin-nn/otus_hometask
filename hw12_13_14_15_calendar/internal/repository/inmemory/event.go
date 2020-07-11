@@ -2,34 +2,42 @@ package inmemory
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
+	outErr "github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/error"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 )
 
 const Type = "inmemory"
+
+var ErrDontUse = errors.New("don't use this method for in_memory implementation")
 
 var _ repository.EventRepo = (*InMemory)(nil)
 
 type InMemory struct {
 	eventsCounter int
 	events        map[int]*repository.Event
-	mutex         *sync.Mutex
+	mutex         *sync.RWMutex
 }
 
 func NewEventRepo() *InMemory {
 	return &InMemory{
 		events: make(map[int]*repository.Event),
-		mutex:  new(sync.Mutex),
+		mutex:  new(sync.RWMutex),
 	}
 }
 
 func (e *InMemory) CreateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-	if e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt) {
-		return nil, repository.ErrDateBusy
+	isBusy, err := e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt)
+	if err != nil {
+		return nil, err
+	}
+	if isBusy {
+		return nil, outErr.ErrDateBusy
 	}
 	e.eventsCounter++
 	event.ID = e.eventsCounter
@@ -37,13 +45,18 @@ func (e *InMemory) CreateEvent(ctx context.Context, event *repository.Event) (*r
 	return event, nil
 }
 
-func (e *InMemory) UpdateEvent(ctx context.Context, eventID int, event *repository.Event) (*repository.Event, error) {
+func (e *InMemory) UpdateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-	if e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt) {
-		return nil, repository.ErrDateBusy
+
+	isBusy, err := e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt)
+	if err != nil {
+		return nil, err
 	}
-	e.events[eventID] = event
+	if isBusy {
+		return nil, outErr.ErrDateBusy
+	}
+	e.events[event.ID] = event
 	return event, nil
 }
 
@@ -57,43 +70,28 @@ func (e *InMemory) DeleteEvent(_ context.Context, eventID int) error {
 		return nil
 	}
 
-	return repository.ErrEventNotFound
+	return outErr.ErrEventNotFound
 }
 
 func (e *InMemory) GetEventByID(_ context.Context, eventID int) (*repository.Event, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+	e.mutex.RLock()
+	defer e.mutex.RUnlock()
 
 	evt, ok := e.events[eventID]
 	if ok {
 		return evt, nil
 	}
 
-	return nil, repository.ErrEventNotFound
+	return nil, outErr.ErrEventNotFound
 }
 
-func (e *InMemory) GetEventsDay(ctx context.Context, userID int, dBegin time.Time) ([]*repository.Event, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	end := dBegin.AddDate(0, 0, 1)
-	return e.getEventsByFilter(ctx, userID, dBegin, end)
+func (e *InMemory) GetEventsByFilter(ctx context.Context, userID int, begin time.Time, end time.Time) ([]*repository.Event, error) {
+	e.mutex.RLock()
+	defer e.mutex.RUnlock()
+	return e.getEventsByFilterInternal(ctx, userID, begin, end)
 }
 
-func (e *InMemory) GetEventsWeek(ctx context.Context, userID int, wBegin time.Time) ([]*repository.Event, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	end := wBegin.AddDate(0, 0, 7)
-	return e.getEventsByFilter(ctx, userID, wBegin, end)
-}
-
-func (e *InMemory) GetEventsMonth(ctx context.Context, userID int, mBegin time.Time) ([]*repository.Event, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	end := mBegin.AddDate(0, 1, 0)
-	return e.getEventsByFilter(ctx, userID, mBegin, end)
-}
-
-func (e *InMemory) getEventsByFilter(_ context.Context, userID int, begin time.Time, end time.Time) ([]*repository.Event, error) {
+func (e *InMemory) getEventsByFilterInternal(_ context.Context, userID int, begin time.Time, end time.Time) ([]*repository.Event, error) {
 	var result []*repository.Event
 	for _, ev := range e.events {
 		if ev.UserID != userID {
@@ -108,16 +106,22 @@ func (e *InMemory) getEventsByFilter(_ context.Context, userID int, begin time.T
 	return result, nil
 }
 
-func (e *InMemory) isBusyTime(_ context.Context, userID int, begin time.Time, end time.Time) bool {
-	for _, ev := range e.events {
-		if ev.UserID != userID {
-			continue
-		}
-		if (begin.After(ev.StartAt) && begin.Before(ev.EndAt)) ||
-			(end.After(ev.StartAt) && end.Before(ev.EndAt)) ||
-			(begin.Before(ev.StartAt) && end.After(ev.EndAt)) {
-			return true
-		}
+func (e *InMemory) isBusyTime(ctx context.Context, userID int, begin time.Time, end time.Time) (bool, error) {
+	events, err := e.getEventsByFilterInternal(ctx, userID, begin, end)
+	if err != nil {
+		return false, err
 	}
-	return false
+	if len(events) == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+// возможно, есть варианты лучше как поступать в подобных ситуация
+func (e *InMemory) Connect(_ context.Context) error {
+	return ErrDontUse
+}
+
+func (e *InMemory) Close() error {
+	return ErrDontUse
 }

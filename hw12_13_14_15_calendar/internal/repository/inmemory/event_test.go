@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	outErr "github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/error"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 )
 
@@ -82,7 +83,7 @@ func TestEvent(t *testing.T) {
 		require.Equal(t, evt.Title, "Test event 1")
 
 		_, err = repo.CreateEvent(ctx, overlapEvent)
-		require.Equal(t, repository.ErrDateBusy, err)
+		require.Equal(t, outErr.ErrDateBusy, err)
 	})
 
 	t.Run("update events", func(t *testing.T) {
@@ -94,15 +95,15 @@ func TestEvent(t *testing.T) {
 		evt.Title = title
 		startAt, _ := time.Parse(time.RFC3339, "2020-01-02T14:00:00+03:00")
 		evt.StartAt = startAt
-		evt, err := repo.UpdateEvent(ctx, eventID, evt)
+		evt, err := repo.UpdateEvent(ctx, evt)
 		require.Nil(t, err)
 		require.Equal(t, evt.Title, title)
 		require.Equal(t, evt.StartAt, startAt)
 
 		evt = overlapEvent
 		evt.ID = eventID
-		_, err = repo.UpdateEvent(ctx, eventID, evt)
-		require.Equal(t, repository.ErrDateBusy, err)
+		_, err = repo.UpdateEvent(ctx, evt)
+		require.Equal(t, outErr.ErrDateBusy, err)
 	})
 
 	t.Run("delete events", func(t *testing.T) {
@@ -110,41 +111,22 @@ func TestEvent(t *testing.T) {
 		eventID := 1
 		unknownEventID := 10
 		err := repo.DeleteEvent(ctx, unknownEventID)
-		require.Equal(t, repository.ErrEventNotFound, err)
+		require.Equal(t, outErr.ErrEventNotFound, err)
 		err = repo.DeleteEvent(ctx, eventID)
 		require.Nil(t, err)
 		_, err = repo.GetEventByID(ctx, eventID)
-		require.Equal(t, repository.ErrEventNotFound, err)
+		require.Equal(t, outErr.ErrEventNotFound, err)
 	})
 
-	t.Run("get day events", func(t *testing.T) {
+	t.Run("get events by filter", func(t *testing.T) {
 		repo := makeRepo()
-		dBegin, err := time.Parse(time.RFC3339, "2020-01-02T00:00:00+03:00")
+		begin, err := time.Parse(time.RFC3339, "2020-01-01T00:00:00+03:00")
+		require.Nil(t, err)
+		end, err := time.Parse(time.RFC3339, "2020-01-15T00:00:00+03:00")
 		require.Nil(t, err)
 
-		events, err := repo.GetEventsDay(ctx, userID, dBegin)
-		require.Nil(t, err)
-		require.Equal(t, 1, len(events))
-		require.Equal(t, events[0].ID, 1)
-	})
-
-	t.Run("get week events", func(t *testing.T) {
-		repo := makeRepo()
-		wBegin, err := time.Parse(time.RFC3339, "2019-12-30T00:00:00+03:00")
-		require.Nil(t, err)
-
-		events, err := repo.GetEventsWeek(ctx, userID, wBegin)
+		events, err := repo.GetEventsByFilter(ctx, userID, begin, end)
 		require.Nil(t, err)
 		require.Equal(t, 2, len(events))
-	})
-
-	t.Run("get month events", func(t *testing.T) {
-		repo := makeRepo()
-		mBegin, err := time.Parse(time.RFC3339, "2020-01-01T00:00:00+03:00")
-		require.Nil(t, err)
-
-		events, err := repo.GetEventsMonth(ctx, userID, mBegin)
-		require.Nil(t, err)
-		require.Equal(t, 3, len(events))
 	})
 }

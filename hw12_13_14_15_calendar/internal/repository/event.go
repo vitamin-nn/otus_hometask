@@ -2,13 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"time"
-)
-
-var (
-	ErrEventNotFound = errors.New("event not found")
-	ErrDateBusy      = errors.New("time is busy")
 )
 
 type Event struct {
@@ -29,11 +23,11 @@ type Notification struct {
 }
 
 type EventRepo interface {
+	Connect(ctx context.Context) error
+	Close() error
 	CreateEvent(ctx context.Context, event *Event) (*Event, error)
-	UpdateEvent(ctx context.Context, eventID int, event *Event) (*Event, error)
+	UpdateEvent(ctx context.Context, event *Event) (*Event, error)
 	DeleteEvent(ctx context.Context, eventID int) error
-	GetEventsDay(ctx context.Context, userID int, dBegin time.Time) ([]*Event, error)
-	GetEventsWeek(ctx context.Context, userID int, wBegin time.Time) ([]*Event, error)
-	GetEventsMonth(ctx context.Context, userID int, mBegin time.Time) ([]*Event, error)
+	GetEventsByFilter(ctx context.Context, userID int, begin time.Time, end time.Time) ([]*Event, error)
 	GetEventByID(ctx context.Context, eventID int) (*Event, error)
 }
