@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgconn"
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/jackc/pgx/v4/stdlib" // pg driver
 
 	outErr "github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/error"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
@@ -71,7 +71,7 @@ func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repos
 		return nil, specErr
 	}
 
-	event.ID = int(eventID)
+	event.ID = eventID
 
 	return event, nil
 }
@@ -222,7 +222,7 @@ func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Tim
 
 func getSpecificError(err error) error {
 	if errPg, ok := err.(*pgconn.PgError); ok {
-		if sqlState := errPg.SQLState(); len(sqlState) > 2 && string(sqlState[0:2]) == ConstraintViolationCode {
+		if sqlState := errPg.SQLState(); len(sqlState) > 2 && sqlState[0:2] == ConstraintViolationCode {
 			return outErr.ErrDateBusy
 		}
 	}

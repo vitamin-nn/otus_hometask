@@ -117,8 +117,8 @@ func (e *InMemory) isBusyTime(ctx context.Context, userID int, begin time.Time, 
 	return true, nil
 }
 
-// возможно, есть варианты лучше как поступать в подобных ситуация
 func (e *InMemory) Connect(_ context.Context) error {
+	// возможно, есть варианты лучше как поступать в подобных ситуация
 	return ErrDontUse
 }
 
