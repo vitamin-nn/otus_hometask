@@ -13,8 +13,10 @@ import (
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 )
 
-const Type = "psql"
-const ConstraintViolationCode = "23"
+const (
+	Type                    = "psql"
+	ConstraintViolationCode = "23"
+)
 
 var _ repository.EventRepo = (*Psql)(nil)
 
@@ -186,7 +188,6 @@ func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Tim
 		begin,
 		end,
 	)
-
 	if err != nil {
 		return nil, err
 	}
