@@ -1,0 +1,14 @@
+[log]
+log_file = "/Users/vvdudov/projects/edu/otus/golang/otus_hometask/hw12_13_14_15_calendar/logs/calendar.log"
+log_level = "debug"
+
+[server]
+addr = ":8080"
+read_timeout = "15s"
+write_timeout = "15s"
+
+[app]
+repo_type = "inmemory"
+
+[psql]
+dsn = "host=localhost port=5432 user=vdudov password=123qwe dbname=calendar sslmode=disable"
