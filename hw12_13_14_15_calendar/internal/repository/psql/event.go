@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgconn"
-	_ "github.com/jackc/pgx/v4/stdlib" // pg driver
 
+	// pg driver.
+	_ "github.com/jackc/pgx/v4/stdlib"
 	outErr "github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/error"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 )
@@ -38,6 +39,7 @@ func (e *Psql) Connect(ctx context.Context) error {
 	}
 	e.db = db
 	e.db.Stats()
+
 	return e.db.PingContext(ctx)
 }
 
@@ -70,6 +72,7 @@ func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repos
 		if specErr == nil {
 			specErr = fmt.Errorf("insert error: %v", err)
 		}
+
 		return nil, specErr
 	}
 
@@ -102,8 +105,10 @@ func (e *Psql) UpdateEvent(ctx context.Context, event *repository.Event) (*repos
 		if specErr == nil {
 			specErr = fmt.Errorf("update error: %v", err)
 		}
+
 		return nil, specErr
 	}
+
 	return event, nil
 }
 
@@ -227,5 +232,6 @@ func getSpecificError(err error) error {
 			return outErr.ErrDateBusy
 		}
 	}
+
 	return nil
 }

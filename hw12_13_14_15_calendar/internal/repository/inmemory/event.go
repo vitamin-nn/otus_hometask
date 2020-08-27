@@ -42,6 +42,7 @@ func (e *InMemory) CreateEvent(ctx context.Context, event *repository.Event) (*r
 	e.eventsCounter++
 	event.ID = e.eventsCounter
 	e.events[event.ID] = event
+
 	return event, nil
 }
 
@@ -57,6 +58,7 @@ func (e *InMemory) UpdateEvent(ctx context.Context, event *repository.Event) (*r
 		return nil, outErr.ErrDateBusy
 	}
 	e.events[event.ID] = event
+
 	return event, nil
 }
 
@@ -67,6 +69,7 @@ func (e *InMemory) DeleteEvent(_ context.Context, eventID int) error {
 	_, ok := e.events[eventID]
 	if ok {
 		delete(e.events, eventID)
+
 		return nil
 	}
 
@@ -88,6 +91,7 @@ func (e *InMemory) GetEventByID(_ context.Context, eventID int) (*repository.Eve
 func (e *InMemory) GetEventsByFilter(ctx context.Context, userID int, begin time.Time, end time.Time) ([]*repository.Event, error) {
 	e.mutex.RLock()
 	defer e.mutex.RUnlock()
+
 	return e.getEventsByFilterInternal(ctx, userID, begin, end)
 }
 
@@ -103,6 +107,7 @@ func (e *InMemory) getEventsByFilterInternal(_ context.Context, userID int, begi
 			result = append(result, ev)
 		}
 	}
+
 	return result, nil
 }
 
@@ -114,6 +119,7 @@ func (e *InMemory) isBusyTime(ctx context.Context, userID int, begin time.Time, 
 	if len(events) == 0 {
 		return false, nil
 	}
+
 	return true, nil
 }
 

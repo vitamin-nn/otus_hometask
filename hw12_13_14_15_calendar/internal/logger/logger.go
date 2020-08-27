@@ -23,6 +23,7 @@ func Init(logCfg config.Log) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -36,6 +37,7 @@ func setLogFile(logFile string) error {
 		return err
 	}
 	log.SetOutput(f)
+
 	return nil
 }
 
@@ -49,5 +51,6 @@ func setLogLevel(logLevel string) error {
 		return err
 	}
 	log.SetLevel(level)
+
 	return nil
 }
