@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+option go_package=".;grpc";
+
+message Event {
+    int32 id = 1;
+    string title = 2;
+    string description = 3;
+    google.protobuf.Timestamp start_at = 4;
+    google.protobuf.Timestamp end_at = 5;
+    google.protobuf.Timestamp notify_at = 6;
+    int32 user_id = 7;
+}
+
+message ModifyEventRequest {
+    string title = 1;
+    string description = 2;
+    google.protobuf.Timestamp start_at = 3;
+    google.protobuf.Timestamp end_at = 4;
+    google.protobuf.Timestamp notify_at = 5;
+}
+
+message CreateEventRequest {
+    ModifyEventRequest event = 1;
+}
+
+message UpdateEventRequest {
+    ModifyEventRequest event = 1;
+    int32 event_id = 2;
+}
+
+message ModifyEventResponse {
+    oneof result {
+        Event event = 1;
+        string error = 2;
+    }
+}
+
+message DeleteEventRequest {
+    int32 event_id = 1;
+}
+
+message DeleteResponse {
+    oneof result {
+        bool success = 1;
+        string error = 2;
+    }
+}
+
+message GetEventsRequest {
+    google.protobuf.Timestamp begin_at = 1;
+}
+
+message EventList {
+    repeated Event events = 1;
+}
+
+message GetEventsResponse {
+    oneof result {
+        EventList events = 1;
+        string error = 2;
+    }
+}
+
+service CalendarService {
+    rpc CreateEvent(CreateEventRequest) returns (ModifyEventResponse) {
+        option (google.api.http) = {
+            post: "/create"
+            body: "*"
+        };
+    }
+    rpc UpdateEvent(UpdateEventRequest) returns (ModifyEventResponse) {
+        option (google.api.http) = {
+            put: "/update/{event_id}"
+            body: "*"
+        };
+    }
+    rpc DeleteEvent(DeleteEventRequest) returns (DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/delete/{event_id}"
+        };
+    }
+    rpc GetEventsDay(GetEventsRequest) returns (GetEventsResponse) {
+        option (google.api.http) = {
+            get: "/get_events_day/{begin_at}"
+        };
+    }
+    rpc GetEventsWeek(GetEventsRequest) returns (GetEventsResponse) {
+        option (google.api.http) = {
+            get: "/get_events_week/{begin_at}"
+        };
+    }
+    rpc GetEventsMonth(GetEventsRequest) returns (GetEventsResponse) {
+        option (google.api.http) = {
+            get: "/get_events_month/{begin_at}"
+        };
+    }
+}

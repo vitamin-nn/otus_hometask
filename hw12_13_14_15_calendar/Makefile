@@ -7,10 +7,10 @@ build:
 	go build -o ./.bin/calendar ./cmd/calendar/main.go
 
 test:
-	go test -race ./...
+	go test -v -race ./...
 
 install-deps:
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOPATH)/bin v1.27.0
+	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(GOPATH)/bin v1.30.0
 
 lint: install-deps
 	golangci-lint run ./...
@@ -22,4 +22,7 @@ run:
 migrate:
 	goose -dir migrations postgres "user=vdudov password=123qwe dbname=calendar sslmode=disable" up
 
+generate:
+	protoc -Iapi -I/usr/local/include -I$(GOPATH)/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.6/third_party/googleapis  --go_out=plugins=grpc:internal/server/grpc calendar.proto
+	protoc -Iapi -I/usr/local/include -I$(GOPATH)/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.6/third_party/googleapis --grpc-gateway_out=logtostderr=true:internal/server/grpc calendar.proto
 .PHONY: build

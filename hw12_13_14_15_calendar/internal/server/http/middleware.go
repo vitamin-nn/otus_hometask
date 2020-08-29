@@ -1,10 +1,12 @@
-package server
+package http
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server"
 )
 
 func logMiddleware(next http.Handler) http.Handler {
@@ -22,5 +24,14 @@ func logMiddleware(next http.Handler) http.Handler {
 			time.Since(start),
 			r.UserAgent(),
 		)
+	})
+}
+
+func userIDMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := r.Header.Get(server.UserIDHeaderKey)
+		log.Infof("User_id: %s", userID)
+		ctx := context.WithValue(r.Context(), server.UserIDGrpcKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

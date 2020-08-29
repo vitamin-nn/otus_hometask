@@ -8,13 +8,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/config"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/logger"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository/inmemory"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository/psql"
-	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server/grpc"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server/http"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase"
 )
 
@@ -46,8 +46,21 @@ func main() {
 	}
 
 	eUseCase := usecase.NewEventUseCase(repo)
-	app := server.NewApp(eUseCase)
-	go app.Run(cfg.Server.Addr, cfg.Server.WriteTimeout, cfg.Server.ReadTimeout)
+	grpcServer := grpc.NewCalendarServer(eUseCase)
+	proxyServer := http.NewProxyServer()
+
+	log.WithFields(cfg.Fields()).Info("Starting calendar service")
+
+	go func() {
+		log.Info("Starting GRPC server")
+		if err := grpcServer.Run(cfg.GrpcServer.Addr); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	go func() {
+		log.Info("Starting HTTP Proxy server")
+		proxyServer.Run(ctx, cfg.Server.Addr, cfg.GrpcServer.Addr, cfg.Server.WriteTimeout, cfg.Server.ReadTimeout)
+	}()
 
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, os.Interrupt)
@@ -55,7 +68,8 @@ func main() {
 
 	ctx, finish := context.WithTimeout(context.Background(), 5*time.Second)
 	defer finish()
-	err = app.Shutdown(ctx)
+	grpcServer.Down()
+	err = proxyServer.Shutdown(ctx)
 	if err != nil {
 		log.Errorf("error while shutdown: %v", err)
 	}

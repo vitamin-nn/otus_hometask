@@ -7,8 +7,11 @@ addr = ":8080"
 read_timeout = "15s"
 write_timeout = "15s"
 
+[grpc_server]
+addr = ":8081"
+
 [app]
-repo_type = "inmemory"
+repo_type = "psql"
 
 [psql]
 dsn = "host=localhost port=5432 user=vdudov password=123qwe dbname=calendar sslmode=disable"
