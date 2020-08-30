@@ -49,6 +49,11 @@ func (e *Psql) Close() error {
 
 func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
 	var eventID int
+	var notifyAt *time.Time
+	if !event.NotifyAt.IsZero() {
+		notifyAt = &event.NotifyAt
+	}
+
 	err := e.db.QueryRowContext(
 		ctx,
 		`INSERT INTO events(
@@ -64,7 +69,7 @@ func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repos
 		event.Description,
 		event.StartAt,
 		event.EndAt,
-		event.NotifyAt,
+		notifyAt,
 		event.UserID,
 	).Scan(&eventID)
 	if err != nil {
@@ -82,6 +87,11 @@ func (e *Psql) CreateEvent(ctx context.Context, event *repository.Event) (*repos
 }
 
 func (e *Psql) UpdateEvent(ctx context.Context, event *repository.Event) (*repository.Event, error) {
+	var notifyAt *time.Time
+	if !event.NotifyAt.IsZero() {
+		notifyAt = &event.NotifyAt
+	}
+
 	_, err := e.db.ExecContext(
 		ctx,
 		`UPDATE events
@@ -90,14 +100,16 @@ func (e *Psql) UpdateEvent(ctx context.Context, event *repository.Event) (*repos
 			description = $2,
 			during = tstzrange($3, $4, '[]'),
 			notify_at = $5,
-			user_id = $6
-		 WHERE id = $7`,
+			user_id = $6,
+			notification_sent = $7
+		 WHERE id = $8`,
 		event.Title,
 		event.Description,
 		event.StartAt,
 		event.EndAt,
-		event.NotifyAt,
+		notifyAt,
 		event.UserID,
+		event.NotificationSent,
 		event.ID,
 	)
 	if err != nil {
@@ -135,6 +147,8 @@ func (e *Psql) DeleteEvent(ctx context.Context, eventID int) error {
 
 func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event, error) {
 	var notifyAt sql.NullTime
+	var notificationSent sql.NullTime
+
 	ev := new(repository.Event)
 	err := e.db.QueryRowContext(
 		ctx,
@@ -145,7 +159,8 @@ func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event
 			lower(during),
 			upper(during),
 			notify_at,
-			user_id
+			user_id,
+			notification_sent
 		FROM events
 		WHERE
 			id = $1
@@ -158,6 +173,7 @@ func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event
 		&ev.EndAt,
 		&notifyAt,
 		&ev.UserID,
+		&notificationSent,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error while get event: %v", err)
@@ -165,6 +181,10 @@ func (e *Psql) GetEventByID(ctx context.Context, eventID int) (*repository.Event
 
 	if notifyAt.Valid {
 		ev.NotifyAt = notifyAt.Time
+	}
+
+	if notificationSent.Valid {
+		ev.NotificationSent = notificationSent.Time
 	}
 
 	if err != nil {
@@ -184,7 +204,8 @@ func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Tim
 			lower(during),
 			upper(during),
 			notify_at,
-			user_id
+			user_id,
+			notification_sent
 		FROM events
 		WHERE
 			user_id = $1
@@ -204,6 +225,7 @@ func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Tim
 		ev := new(repository.Event)
 
 		var notifyAt sql.NullTime
+		var notificationSent sql.NullTime
 
 		if err := rows.Scan(
 			&ev.ID,
@@ -213,6 +235,7 @@ func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Tim
 			&ev.EndAt,
 			&notifyAt,
 			&ev.UserID,
+			&notificationSent,
 		); err != nil {
 			return nil, fmt.Errorf("error while scan: %v", err)
 		}
@@ -220,10 +243,88 @@ func (e *Psql) GetEventsByFilter(ctx context.Context, userID int, begin time.Tim
 		if notifyAt.Valid {
 			ev.NotifyAt = notifyAt.Time
 		}
+		if notificationSent.Valid {
+			ev.NotificationSent = notificationSent.Time
+		}
+
 		result = append(result, ev)
 	}
 
 	return result, rows.Err()
+}
+
+func (e *Psql) DeleteOldEvents(ctx context.Context, t time.Time) error {
+	_, err := e.db.ExecContext(
+		ctx,
+		"DELETE FROM events WHERE upper(during) < $1",
+		t,
+	)
+	if err != nil {
+		return fmt.Errorf("delete old events error: %v", err)
+	}
+
+	return nil
+}
+
+func (e *Psql) GetNotifyEvents(ctx context.Context, t time.Time) ([]*repository.Notification, error) {
+	rows, err := e.db.QueryContext(
+		ctx,
+		`SELECT
+			id,
+			title,
+			lower(during),
+			user_id
+		FROM events
+		WHERE
+			notify_at < $1
+			AND notification_sent is null`,
+		t,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []*repository.Notification
+
+	for rows.Next() {
+		n := new(repository.Notification)
+
+		if err := rows.Scan(
+			&n.EventID,
+			&n.EventTitle,
+			&n.StartAt,
+			&n.NotifyUserID,
+		); err != nil {
+			return nil, fmt.Errorf("error while scan: %v", err)
+		}
+
+		result = append(result, n)
+	}
+
+	return result, rows.Err()
+}
+
+func (e *Psql) UpdateNotificationSent(ctx context.Context, eventID int, t time.Time) error {
+	_, err := e.db.ExecContext(
+		ctx,
+		`UPDATE events
+		 SET
+			notification_sent = $1
+		 WHERE id = $2`,
+		t,
+		eventID,
+	)
+	if err != nil {
+		specErr := getSpecificError(err)
+		if specErr == nil {
+			specErr = fmt.Errorf("update error: %v", err)
+		}
+
+		return specErr
+	}
+
+	return nil
 }
 
 func getSpecificError(err error) error {

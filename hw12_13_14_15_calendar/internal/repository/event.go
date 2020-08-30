@@ -6,13 +6,14 @@ import (
 )
 
 type Event struct {
-	ID          int
-	Title       string
-	Description string
-	StartAt     time.Time
-	EndAt       time.Time
-	NotifyAt    time.Time
-	UserID      int
+	ID               int
+	Title            string
+	Description      string
+	StartAt          time.Time
+	EndAt            time.Time
+	NotifyAt         time.Time
+	NotificationSent time.Time
+	UserID           int
 }
 
 type Notification struct {
@@ -30,4 +31,7 @@ type EventRepo interface {
 	DeleteEvent(ctx context.Context, eventID int) error
 	GetEventsByFilter(ctx context.Context, userID int, begin time.Time, end time.Time) ([]*Event, error)
 	GetEventByID(ctx context.Context, eventID int) (*Event, error)
+	DeleteOldEvents(ctx context.Context, t time.Time) error
+	GetNotifyEvents(ctx context.Context, t time.Time) ([]*Notification, error)
+	UpdateNotificationSent(ctx context.Context, eventID int, t time.Time) error
 }

@@ -4,7 +4,7 @@ ifndef $(GOPATH)
 endif
 
 build:
-	go build -o ./.bin/calendar ./cmd/calendar/main.go
+	CGO_ENABLED=0 GOARCH=amd64 go build -o ./.bin/calendar
 
 test:
 	go test -v -race ./...
@@ -15,14 +15,25 @@ install-deps:
 lint: install-deps
 	golangci-lint run ./...
 
-run:
-	go run ./cmd/calendar/main.go
+run-compose:
+	docker-compose -f ./deployments/docker-compose.yml up -d
 
-# далее dsn для постгреса должен уехать в переменную окружения и не будет здесь светиться
+down-compose:
+	docker-compose -f ./deployments/docker-compose.yml down
+
+run-server:
+	source ./configs/local.env && source ./configs/local.server.env && go run . server
+
+run-sc:
+	source ./configs/local.env && source ./configs/local.scheduler.env && go run . scheduler
+
+run-sender:
+	source ./configs/local.env && source ./configs/local.sender.env && go run . sender
+
 migrate:
 	goose -dir migrations postgres "user=vdudov password=123qwe dbname=calendar sslmode=disable" up
 
 generate:
 	protoc -Iapi -I/usr/local/include -I$(GOPATH)/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.6/third_party/googleapis  --go_out=plugins=grpc:internal/server/grpc calendar.proto
 	protoc -Iapi -I/usr/local/include -I$(GOPATH)/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.6/third_party/googleapis --grpc-gateway_out=logtostderr=true:internal/server/grpc calendar.proto
-.PHONY: build
+.PHONY: build test lint run-compose down-compose run-server run-sc migrate generate

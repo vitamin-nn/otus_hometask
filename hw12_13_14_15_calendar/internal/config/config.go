@@ -1,72 +1,117 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/caarlos0/env/v6"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
-func Load(filepath string) (c *Config, err error) {
-	viper.SetConfigFile(filepath)
-	viper.SetConfigType("toml")
-	setDefaults()
+type ServerCfg struct {
+	Log        Log
+	Server     Server
+	GrpcServer GrpcServer
+	App        App
+	PSQL       PSQL
+}
 
-	err = viper.ReadInConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := new(Config)
-	if err = viper.Unmarshal(cfg); err != nil {
+func LoadServer() (c *ServerCfg, err error) {
+	cfg := new(ServerCfg)
+	if err := env.Parse(cfg); err != nil {
 		return nil, err
 	}
 
 	return cfg, nil
 }
 
-func setDefaults() {
-	viper.SetDefault("log.log_level", "info")
-	viper.SetDefault("server.read_timeout", "15s")
-	viper.SetDefault("server.read_timeout", "15s")
-}
-
-func (cfg *Config) Fields() log.Fields {
+func (cs *ServerCfg) Fields() log.Fields {
 	return log.Fields{
-		"http_server_addr": cfg.Server.Addr,
-		"grpc_server_addr": cfg.GrpcServer.Addr,
-		"repo":             cfg.App.RepoType,
-		"log_level":        cfg.Log.LogLevel,
+		"http_server_addr": cs.Server.Addr,
+		"grpc_server_addr": cs.GrpcServer.Addr,
+		"repo":             cs.App.RepoType,
+		"log_level":        cs.Log.LogLevel,
 	}
 }
 
-type Config struct {
-	Log        Log
-	Server     Server
-	GrpcServer GrpcServer `mapstructure:"grpc_server"`
-	App        App
-	PSQL       PSQL
+type SchedulerCfg struct {
+	Log       Log
+	App       App
+	PSQL      PSQL
+	Rabbit    Rabbit
+	Scheduler Scheduler
+}
+
+func LoadScheduler() (c *SchedulerCfg, err error) {
+	cfg := new(SchedulerCfg)
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+type SenderCfg struct {
+	Log    Log
+	Rabbit Rabbit
+}
+
+func LoadSender() (c *SenderCfg, err error) {
+	cfg := new(SenderCfg)
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }
 
 type PSQL struct {
-	DSN string
+	User     string `env:"POSTGRES_USER,required"`
+	Password string `env:"POSTGRES_PASSWORD,required"`
+	DB       string `env:"POSTGRES_DB,required"`
+	DBHost   string `env:"POSTGRES_DB_HOST,required"`
+	Port     int    `env:"POSTGRES_PORT,required"`
+}
+
+func (cpg *PSQL) GetDSN() string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", cpg.DBHost, cpg.Port, cpg.User, cpg.Password, cpg.DB)
 }
 
 type Log struct {
-	LogFile  string `mapstructure:"log_file"`
-	LogLevel string `mapstructure:"log_level"`
+	LogFile  string `env:"CALENDAR_LOG_FILE"`
+	LogLevel string `env:"CALENDAR_LOG_LEVEL" envDefault:"info"`
 }
 
 type Server struct {
-	Addr         string
-	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+	Addr         string        `env:"CALENDAR_HTTP_ADDR,required"`
+	ReadTimeout  time.Duration `env:"CALENDAR_HTTP_READ_TO" envDefault:"15s"`
+	WriteTimeout time.Duration `env:"CALENDAR_HTTP_WRITE_TO" envDefault:"15s"`
 }
 
 type GrpcServer struct {
-	Addr string
+	Addr string `env:"CALENDAR_GRPC_ADDR,required"`
 }
 
 type App struct {
-	RepoType string `mapstructure:"repo_type"`
+	RepoType string `env:"CALENDAR_REPO_TYPE" envDefault:"internal"`
+}
+
+type Rabbit struct {
+	User         string `env:"RABBITMQ_DEFAULT_USER,required"`
+	Password     string `env:"RABBITMQ_DEFAULT_PASS,required"`
+	Host         string `env:"RABBITMQ_HOST,required"`
+	VHost        string `env:"RABBITMQ_DEFAULT_VHOST,required"`
+	ExchangeName string `env:"RABBITMQ_EXCHANGE_NAME,required"`
+	ExchangeType string `env:"RABBITMQ_EXCHANGE_TYPE,required"`
+	QueueName    string `env:"RABBITMQ_QUEUE_NAME,required"`
+}
+
+func (cr *Rabbit) GetDSN() string {
+	return fmt.Sprintf("amqp://%s:%s@%s:5672/%s", cr.User, cr.Password, cr.Host, cr.VHost)
+}
+
+type Scheduler struct {
+	CheckInterval time.Duration `env:"SCHEDULER_CHECK_INTERVAL" envDefault:"60s"`
+	CleanInterval time.Duration `env:"SCHEDULER_CLEAN_INTERVAL" envDefault:"60s"`
+	EventLiveDays int           `env:"SCHEDULER_EVENT_LIVE_DAYS" envDefault:"365"`
 }

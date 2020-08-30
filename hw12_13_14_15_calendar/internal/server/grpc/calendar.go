@@ -102,6 +102,18 @@ func (s *CalendarServer) DeleteEvent(ctx context.Context, req *DeleteEventReques
 	return resp, nil
 }
 
+func (s *CalendarServer) GetEventsDay(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
+	return s.getFilteredEvents(ctx, req, s.eUseCase.GetEventsDay)
+}
+
+func (s *CalendarServer) GetEventsWeek(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
+	return s.getFilteredEvents(ctx, req, s.eUseCase.GetEventsWeek)
+}
+
+func (s *CalendarServer) GetEventsMonth(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
+	return s.getFilteredEvents(ctx, req, s.eUseCase.GetEventsMonth)
+}
+
 func (s *CalendarServer) getFilteredEvents(ctx context.Context, req *GetEventsRequest, f filterFunc) (*GetEventsResponse, error) {
 	userID, err := getUser(ctx)
 	if err != nil {
@@ -145,16 +157,4 @@ func (s *CalendarServer) getFilteredEvents(ctx context.Context, req *GetEventsRe
 	}
 
 	return resp, nil
-}
-
-func (s *CalendarServer) GetEventsDay(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
-	return s.getFilteredEvents(ctx, req, s.eUseCase.GetEventsDay)
-}
-
-func (s *CalendarServer) GetEventsWeek(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
-	return s.getFilteredEvents(ctx, req, s.eUseCase.GetEventsWeek)
-}
-
-func (s *CalendarServer) GetEventsMonth(ctx context.Context, req *GetEventsRequest) (*GetEventsResponse, error) {
-	return s.getFilteredEvents(ctx, req, s.eUseCase.GetEventsMonth)
 }

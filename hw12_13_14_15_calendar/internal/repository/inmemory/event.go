@@ -50,6 +50,11 @@ func (e *InMemory) UpdateEvent(ctx context.Context, event *repository.Event) (*r
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
+	_, ok := e.events[event.ID]
+	if !ok {
+		return nil, outErr.ErrEventNotFound
+	}
+
 	isBusy, err := e.isBusyTime(ctx, event.UserID, event.StartAt, event.EndAt)
 	if err != nil {
 		return nil, err
@@ -123,11 +128,59 @@ func (e *InMemory) isBusyTime(ctx context.Context, userID int, begin time.Time, 
 	return true, nil
 }
 
+func (e *InMemory) DeleteOldEvents(_ context.Context, t time.Time) error {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	for id, ev := range e.events {
+		if t.After(ev.EndAt) {
+			delete(e.events, id)
+		}
+	}
+
+	return nil
+}
+
+func (e *InMemory) GetNotifyEvents(ctx context.Context, t time.Time) ([]*repository.Notification, error) {
+	var result []*repository.Notification
+	for _, ev := range e.events {
+		if t.After(ev.NotifyAt) && ev.NotificationSent.IsZero() {
+			n := getNotificationByEvent(ev)
+			result = append(result, n)
+		}
+	}
+
+	return result, nil
+}
+
+func (e *InMemory) UpdateNotificationSent(ctx context.Context, eventID int, t time.Time) error {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	_, ok := e.events[eventID]
+	if !ok {
+		return outErr.ErrEventNotFound
+	}
+
+	e.events[eventID].NotificationSent = t
+
+	return nil
+}
+
 func (e *InMemory) Connect(_ context.Context) error {
 	// возможно, есть варианты лучше как поступать в подобных ситуация
 	return ErrDontUse
 }
 
 func (e *InMemory) Close() error {
-	return ErrDontUse
+	return nil
+}
+
+func getNotificationByEvent(e *repository.Event) *repository.Notification {
+	return &repository.Notification{
+		EventID:      e.ID,
+		EventTitle:   e.Title,
+		StartAt:      e.StartAt,
+		NotifyUserID: e.UserID,
+	}
 }
