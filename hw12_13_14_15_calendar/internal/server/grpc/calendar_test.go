@@ -11,12 +11,12 @@ import (
 	outErr "github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/error"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server"
-	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase/calendar"
 	"google.golang.org/grpc/metadata"
 )
 
 func TestGrpcModifyEvent(t *testing.T) {
-	uc := new(usecase.EventUseCaseMock)
+	uc := new(calendar.EventUseCaseMock)
 	s := NewCalendarServer(uc)
 
 	tStart, err := time.Parse(time.RFC3339, "2020-01-02T15:00:00Z")
@@ -101,7 +101,7 @@ func TestGrpcModifyEvent(t *testing.T) {
 	})
 
 	t.Run("error modify event", func(t *testing.T) {
-		ucErr := new(usecase.EventUseCaseMock)
+		ucErr := new(calendar.EventUseCaseMock)
 		sErr := NewCalendarServer(ucErr)
 
 		// в коде реализации библиотеки Mock в методе On происходит append для каждого нового метода,
@@ -124,7 +124,7 @@ func TestGrpcModifyEvent(t *testing.T) {
 
 func TestGrpcDeleteEvent(t *testing.T) {
 	t.Run("delete event", func(t *testing.T) {
-		uc := new(usecase.EventUseCaseMock)
+		uc := new(calendar.EventUseCaseMock)
 		s := NewCalendarServer(uc)
 
 		id := 1
@@ -141,7 +141,7 @@ func TestGrpcDeleteEvent(t *testing.T) {
 		require.True(t, res.Success)
 	})
 	t.Run("delete event with error", func(t *testing.T) {
-		uc := new(usecase.EventUseCaseMock)
+		uc := new(calendar.EventUseCaseMock)
 		s := NewCalendarServer(uc)
 
 		retErr := outErr.ErrEventNotFound
@@ -161,7 +161,7 @@ func TestGrpcDeleteEvent(t *testing.T) {
 }
 
 func TestGrpcFilterEvent(t *testing.T) {
-	uc := new(usecase.EventUseCaseMock)
+	uc := new(calendar.EventUseCaseMock)
 	s := NewCalendarServer(uc)
 
 	// здесь нет необходиомсти задавать корректные даты, т.к. используем mock

@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/repository"
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/server"
-	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase"
+	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/usecase/calendar"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -21,10 +21,10 @@ type filterFunc func(context.Context, int, time.Time) ([]*repository.Event, erro
 
 type CalendarServer struct {
 	gs       *grpc.Server
-	eUseCase usecase.EventUseCaser
+	eUseCase calendar.EventUseCaser
 }
 
-func NewCalendarServer(eUseCase usecase.EventUseCaser) *CalendarServer {
+func NewCalendarServer(eUseCase calendar.EventUseCaser) *CalendarServer {
 	s := new(CalendarServer)
 	s.eUseCase = eUseCase
 
