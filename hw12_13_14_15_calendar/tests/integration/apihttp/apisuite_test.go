@@ -94,18 +94,6 @@ func (a *apiSuite) startConsuming() error {
 		log.Fatalf("rabbit channel error: %v", err)
 	}
 
-	/*if err = a.rabbit.ch.ExchangeDeclare(
-		a.cfg.Rabbit.ExchangeName,
-		a.cfg.Rabbit.ExchangeType,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	); err != nil {
-		log.Fatalf("exchange declare error: %v", err)
-	}*/
-
 	queueName := a.cfg.Rabbit.QueueName
 	_, err = a.rabbit.ch.QueueDeclare(queueName, true, true, true, false, nil)
 	if err != nil {
