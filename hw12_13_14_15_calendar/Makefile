@@ -27,13 +27,13 @@ build-docker-migrate:
 build-docker-int-tests:
 	docker build -f ./integration-test.Dockerfile -t calendar/integration-tests ./
 
-test-integration: build-docker-server build-docker-migrate build-docker-scheduler build-docker-sender build-docker-int-tests
+bdd: build-docker-server build-docker-migrate build-docker-scheduler build-docker-sender build-docker-int-tests
 	./scripts/run_int_tests.sh
 
 test:
 	go test -v -race -gcflags=-l -timeout=30s ./...
 
-bdd:
+bdd-local:
 	source ./configs/local.env && source ./configs/local.server.env && cd ./tests/integration/apihttp && godog
 
 install-deps:
