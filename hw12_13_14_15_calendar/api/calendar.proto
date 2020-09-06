@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
+import "protoc-gen-swagger/options/annotations.proto";
 option go_package=".;grpc";
 
 message Event {
@@ -70,31 +71,88 @@ service CalendarService {
             post: "/create"
             body: "*"
         };
+
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+            security: {
+                security_requirement: {
+                    key: "User_id";
+                    value: {}
+                }
+            }
+        };
     }
     rpc UpdateEvent(UpdateEventRequest) returns (ModifyEventResponse) {
         option (google.api.http) = {
-            put: "/update/{event_id}"
+            put: "/update"
             body: "*"
+        };
+
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+            security: {
+                security_requirement: {
+                    key: "User_id";
+                    value: {}
+                }
+            }
         };
     }
     rpc DeleteEvent(DeleteEventRequest) returns (DeleteResponse) {
         option (google.api.http) = {
             delete: "/delete/{event_id}"
         };
+
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+            security: {
+                security_requirement: {
+                    key: "User_id";
+                    value: {}
+                }
+            }
+        };
     }
     rpc GetEventsDay(GetEventsRequest) returns (GetEventsResponse) {
         option (google.api.http) = {
-            get: "/get_events_day/{begin_at}"
+            post: "/get_events_day"
+            body: "*"
+        };
+
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+            security: {
+                security_requirement: {
+                    key: "User_id";
+                    value: {}
+                }
+            }
         };
     }
     rpc GetEventsWeek(GetEventsRequest) returns (GetEventsResponse) {
         option (google.api.http) = {
-            get: "/get_events_week/{begin_at}"
+            post: "/get_events_week"
+            body: "*"
+        };
+
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+            security: {
+                security_requirement: {
+                    key: "User_id";
+                    value: {}
+                }
+            }
         };
     }
     rpc GetEventsMonth(GetEventsRequest) returns (GetEventsResponse) {
         option (google.api.http) = {
-            get: "/get_events_month/{begin_at}"
+            post: "/get_events_month"
+            body: "*"
+        };
+
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+            security: {
+                security_requirement: {
+                    key: "User_id";
+                    value: {}
+                }
+            }
         };
     }
 }

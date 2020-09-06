@@ -65,6 +65,22 @@ func LoadSender() (c *SenderCfg, err error) {
 	return cfg, nil
 }
 
+type TestCfg struct {
+	App    App
+	PSQL   PSQL
+	Rabbit Rabbit
+	Server Server
+}
+
+func LoadTest() (c *TestCfg, err error) {
+	cfg := new(TestCfg)
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
 type PSQL struct {
 	User     string `env:"POSTGRES_USER,required"`
 	Password string `env:"POSTGRES_PASSWORD,required"`
