@@ -11,7 +11,4 @@ COPY . /opt/go/app/
 
 WORKDIR /opt/go/app/tests/integration/apihttp
 
-#RUN chmod u+x /opt/go/app/db/migrate.sh
-
-#RUN cd ./integration/apihttp
 ENTRYPOINT ["godog"]
