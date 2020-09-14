@@ -8,13 +8,10 @@ import (
 	"github.com/vitamin-nn/otus_hometask/hw12_13_14_15_calendar/internal/config"
 )
 
-var (
-	ErrEmptyLogFile  = errors.New("empty log file error")
-	ErrEmptyLogLevel = errors.New("empty log level error")
-)
+var ErrEmptyLogLevel = errors.New("empty log level error")
 
 func Init(logCfg config.Log) error {
-	err := setLogFile(logCfg.LogFile)
+	err := setLogOutput(logCfg.LogFile)
 	if err != nil {
 		return err
 	}
@@ -27,9 +24,11 @@ func Init(logCfg config.Log) error {
 	return nil
 }
 
-func setLogFile(logFile string) error {
+func setLogOutput(logFile string) error {
 	if logFile == "" {
-		return ErrEmptyLogFile
+		log.SetOutput(os.Stdout)
+
+		return nil
 	}
 
 	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)

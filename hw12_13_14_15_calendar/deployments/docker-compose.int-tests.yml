@@ -2,36 +2,35 @@ version: "3"
 
 services:
     rabbit:
-        container_name: calendar-rabbit
+        container_name: "calendar-rabbit-test"
         image: rabbitmq:3.8.7-management-alpine
         env_file:
-            - env/rabbit.env
+            - env/rabbit.int-tests.env
         ports:
             - "5672:5672"
             - "15672:15672"
-    db:
+    db-test:
         image: postgres:12
-        container_name: "calendar-db"
+        container_name: "calendar-db-test"
         ports:
             - "5432:5432"
         env_file:
             - env/database.env
         volumes:
             - ../build/db/init.dev.sql:/docker-entrypoint-initdb.d/init.sql
-            - database-calendar-data:/var/lib/postgresql/data/
     migration:
         image: calendar/migrate
-        container_name: "calendar-migration"
+        container_name: "calendar-migration-test"
         depends_on:
-            - db
+            - db-test
         env_file:
             - env/database.env
         environment:
-            - POSTGRES_DB_HOST=db
+            - POSTGRES_DB_HOST=db-test
     server:
         image: calendar/server
         restart: always
-        container_name: "calendar-server"
+        container_name: "calendar-server-test"
         ports:
             - "8081:8081"
             - "8080:8080"
@@ -42,33 +41,48 @@ services:
             - env/database.env
             - env/server.env
         environment:
-            - POSTGRES_DB_HOST=db
+            - POSTGRES_DB_HOST=db-test
     scheduler:
         image: calendar/scheduler
         restart: always
-        container_name: "calendar-scheduler"
+        container_name: "calendar-scheduler-test"
         depends_on:
             - migration
             - rabbit
         env_file:
             - env/common.env
-            - env/rabbit.env
+            - env/rabbit.int-tests.env
             - env/database.env
-            - env/scheduler.env
+            - env/scheduler.int-tests.env
         environment:
-            - POSTGRES_DB_HOST=db
+            - POSTGRES_DB_HOST=db-test
             - RABBITMQ_HOST=rabbit
     sender:
         image: calendar/sender
         restart: always
-        container_name: "calendar-sender"
+        container_name: "calendar-sender-test"
         depends_on:
             - rabbit
         env_file:
             - env/common.env
-            - env/rabbit.env
+            - env/rabbit.int-tests.env
             - env/sender.env
         environment:
             - RABBITMQ_HOST=rabbit
-volumes:
-    database-calendar-data:
+
+    integration-tests:
+        image: calendar/integration-tests
+        container_name: "calendar-integration-tests"
+        depends_on:
+            - server
+            - scheduler
+        env_file:
+            - env/common.env
+            - env/rabbit.int-tests.env
+            - env/database.env
+            - env/server.env
+        environment:
+            - POSTGRES_DB_HOST=db-test
+            - CALENDAR_HTTP_ADDR=server:8080
+            - RABBITMQ_HOST=rabbit
+            - RABBITMQ_QUEUE_NAME=notification_queue_test_integration
